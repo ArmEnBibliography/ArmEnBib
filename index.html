@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Bibliography Search & Authors - ArmEn Project</title>
+<style>
+  body { font-family: sans-serif; padding: 20px; }
+  h1 { margin-bottom: 15px; }
+  h2 { margin-top: 30px; }
+  input { padding: 6px; margin: 5px; width: 260px; }
+  li { margin-bottom: 10px; }
+
+  .autocomplete { position: relative; display: inline-block; }
+  .suggestions {
+    position: absolute;
+    background: white;
+    border: 1px solid #ccc;
+    max-height: 150px;
+    overflow-y: auto;
+    width: 260px;
+    z-index: 1000;
+  }
+  .suggestions div { padding: 6px; cursor: pointer; }
+  .suggestions div:hover { background: #eee; }
+
+  .author { margin-bottom: 20px; }
+  .work { margin-left: 20px; cursor: pointer; color: blue; text-decoration: underline; }
+  .work:hover { color: darkblue; }
+  #citationBox { margin-top: 30px; padding: 10px; border: 1px solid #ccc; background: #f9f9f9; }
+
+  #tabs { margin-bottom: 20px; }
+  #tabs button { padding: 10px 20px; margin-right: 5px; cursor: pointer; }
+  #tabs button.active { background-color: #007bff; color: white; border: none; }
+</style>
+</head>
+<body>
+
+<h1>ArmEn Project Bibliography</h1>
+
+<div id="tabs">
+  <button id="searchTab" class="active">Search</button>
+  <button id="authorsTab">Authors</button>
+</div>
+
+<!-- -------- SEARCH PAGE -------- -->
+<div id="searchPage">
+  <h2>Universal Search</h2>
+  <input type="text" id="universalSearch" placeholder="Type anything (title, author, tag…)">
+
+  <h2>Field-specific Search</h2>
+
+  <div class="autocomplete"><input id="titleSearch" placeholder="Title"></div>
+  <div class="autocomplete"><input id="authorSearch" placeholder="Author"><div class="suggestions" id="authorSuggestions"></div></div>
+  <div class="autocomplete"><input id="editorSearch" placeholder="Editor"><div class="suggestions" id="editorSuggestions"></div></div>
+  <div class="autocomplete"><input id="publisherSearch" placeholder="Publisher"><div class="suggestions" id="publisherSuggestions"></div></div>
+  <div class="autocomplete"><input id="languageSearch" placeholder="Language"><div class="suggestions" id="languageSuggestions"></div></div>
+  <div class="autocomplete"><input id="yearSearch" placeholder="Year"></div>
+  <div class="autocomplete"><input id="tagSearch" placeholder="Tag (exact)"><div class="suggestions" id="tagSuggestions"></div></div>
+
+  <ul id="results"></ul>
+</div>
+
+<!-- -------- AUTHORS PAGE -------- -->
+<div id="authorsPage" style="display:none;">
+  <div id="authorsList"></div>
+  <h2>Citation Info</h2>
+  <div id="citationBox">Click on a work to see full citation info here.</div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+<script>
+let bibEntries = [];
+let vocab = { author: [], editor: [], publisher: [], language: [], tags: [] };
+
+// ---- LOAD CSV ----
+Papa.parse('demo.csv', {
+  header: true,
+  download: true,
+  skipEmptyLines: true,
+  complete: function(results) {
+    bibEntries = results.data.map(e => {
+      const manual = e['Manual Tags'] ? e['Manual Tags'].split(/\s*;\s*/) : [];
+      const auto = e['Automatic Tags'] ? e['Automatic Tags'].split(/\s*;\s*/) : [];
+      const tags = [...manual, ...auto];
+      return {
+        title: e.Title || '',
+        author: e.Author || '',
+        editor: e.Editor || '',
+        publisher: e.Publisher || '',
+        language: e.Language || '',
+        year: e['Publication Year'] || '',
+        tags
+      };
+    });
+    initAll();
+  }
+});
+
+// ---- INIT EVERYTHING AFTER DATA IS LOADED ----
+function initAll() {
+  buildVocab();
+  setupAutocompleteFields();
+  displaySearchResults(bibEntries);
+  buildAuthorList();
+}
+
+// ---- BUILD VOCAB ----
+function buildVocab() {
+  vocab.author = [...new Set(bibEntries.map(e => e.author).filter(Boolean))];
+  vocab.editor = [...new Set(bibEntries.map(e => e.editor).filter(Boolean))];
+  vocab.publisher = [...new Set(bibEntries.map(e => e.publisher).filter(Boolean))];
+  vocab.language = [...new Set(bibEntries.map(e => e.language).filter(Boolean))];
+  vocab.tags = [...new Set(bibEntries.flatMap(e => e.tags))];
+}
+
+// ---- AUTOCOMPLETE ----
+function setupAutocomplete(inputId, suggestionId, values) {
+  const input = document.getElementById(inputId);
+  const box = document.getElementById(suggestionId);
+  input.addEventListener('input', () => {
+    box.innerHTML = '';
+    const q = input.value.toLowerCase();
+    if (!q) return;
+    values.filter(v => v.toLowerCase().includes(q)).slice(0,10).forEach(v => {
+      const div = document.createElement('div');
+      div.textContent = v;
+      div.onclick = () => { input.value = v; box.innerHTML = ''; filterEntries(); };
+      box.appendChild(div);
+    });
+  });
+  document.addEventListener('click', e => { if (!input.contains(e.target)) box.innerHTML = ''; });
+}
+
+function setupAutocompleteFields() {
+  setupAutocomplete('authorSearch','authorSuggestions',vocab.author);
+  setupAutocomplete('editorSearch','editorSuggestions',vocab.editor);
+  setupAutocomplete('publisherSearch','publisherSuggestions',vocab.publisher);
+  setupAutocomplete('languageSearch','languageSuggestions',vocab.language);
+  setupAutocomplete('tagSearch','tagSuggestions',vocab.tags);
+}
+
+// ---- SEARCH LOGIC ----
+document.getElementById('universalSearch').addEventListener('input', e => {
+  const q = e.target.value.toLowerCase();
+  displaySearchResults(bibEntries.filter(e =>
+    `${e.title} ${e.author} ${e.editor} ${e.publisher} ${e.language} ${e.year} ${e.tags.join(' ')}`.toLowerCase().includes(q)
+  ));
+});
+
+function filterEntries() {
+  const t = titleSearch.value.toLowerCase();
+  const a = authorSearch.value.toLowerCase();
+  const ed = editorSearch.value.toLowerCase();
+  const p = publisherSearch.value.toLowerCase();
+  const l = languageSearch.value.toLowerCase();
+  const y = yearSearch.value.toLowerCase();
+  const tag = tagSearch.value.toLowerCase();
+  displaySearchResults(bibEntries.filter(e =>
+    e.title.toLowerCase().includes(t) &&
+    e.author.toLowerCase().includes(a) &&
+    e.editor.toLowerCase().includes(ed) &&
+    e.publisher.toLowerCase().includes(p) &&
+    e.language.toLowerCase().includes(l) &&
+    e.year.toLowerCase().includes(y) &&
+    (tag ? e.tags.some(x => x.toLowerCase() === tag) : true)
+  ));
+}
+
+function displaySearchResults(entries) {
+  const results = document.getElementById('results');
+  results.innerHTML = '';
+  entries.forEach(e => {
+    const li = document.createElement('li');
+    li.innerHTML = `<strong>${e.title}</strong> — ${e.author || e.editor} (${e.year})<br>
+    ${e.publisher} | ${e.language}<br>
+    <em>${e.tags.join('; ')}</em>`;
+    results.appendChild(li);
+  });
+}
+
+// ---- AUTHOR LIST ----
+function buildAuthorList() {
+  const authorsMap = {};
+  bibEntries.forEach(entry => {
+    const authors = entry.author ? entry.author.split(/\s*;\s*/) : [];
+    authors.forEach(author => {
+      if (!authorsMap[author]) authorsMap[author] = [];
+      authorsMap[author].push(entry);
+    });
+  });
+  const sortedAuthors = Object.keys(authorsMap).sort((a,b) => a.localeCompare(b));
+  const authorsDiv = document.getElementById('authorsList');
+  authorsDiv.innerHTML = '';
+  sortedAuthors.forEach(author => {
+    const authorDiv = document.createElement('div');
+    authorDiv.className = 'author';
+    const authorTitle = document.createElement('strong');
+    authorTitle.textContent = author;
+    authorDiv.appendChild(authorTitle);
+    authorsMap[author].forEach(entry => {
+      const workDiv = document.createElement('div');
+      workDiv.className = 'work';
+      workDiv.textContent = entry.title;
+      workDiv.onclick = () => showCitation(entry);
+      authorDiv.appendChild(workDiv);
+    });
+    authorsDiv.appendChild(authorDiv);
+  });
+}
+
+function showCitation(entry) {
+  const box = document.getElementById('citationBox');
+  box.innerHTML = `
+    <strong>Title:</strong> ${entry.title} <br>
+    <strong>Author:</strong> ${entry.author || entry.editor} <br>
+    <strong>Editor:</strong> ${entry.editor || '-'} <br>
+    <strong>Publisher:</strong> ${entry.publisher || '-'} <br>
+    <strong>Language:</strong> ${entry.language || '-'} <br>
+    <strong>Year:</strong> ${entry.year || '-'} <br>
+    <strong>Tags:</strong> ${entry.tags.join('; ') || '-'}
+  `;
+}
+
+// ---- TABS ----
+const searchTabBtn = document.getElementById('searchTab');
+const authorsTabBtn = document.getElementById('authorsTab');
+const searchPage = document.getElementById('searchPage');
+const authorsPage = document.getElementById('authorsPage');
+
+searchTabBtn.onclick = () => { searchPage.style.display='block'; authorsPage.style.display='none'; searchTabBtn.classList.add('active'); authorsTabBtn.classList.remove('active'); };
+authorsTabBtn.onclick = () => { searchPage.style.display='none'; authorsPage.style.display='block'; authorsTabBtn.classList.add('active'); searchTabBtn.classList.remove('active'); };
+</script>
+
+</body>
+</html>
