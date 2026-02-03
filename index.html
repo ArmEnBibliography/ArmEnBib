@@ -2,35 +2,20 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>ArmEn Bibliography</title>
+<title>ArmEn Project Bibliography</title>
 
 <style>
   body { font-family: sans-serif; padding: 20px; }
   h1 { margin-bottom: 15px; }
   h2 { margin-top: 30px; }
-
   input { padding: 6px; margin: 5px; width: 260px; }
   li { margin-bottom: 10px; }
 
-  .autocomplete { position: relative; display: inline-block; }
-  .suggestions {
-    position: absolute;
-    background: white;
-    border: 1px solid #ccc;
-    max-height: 150px;
-    overflow-y: auto;
-    width: 260px;
-    z-index: 1000;
-  }
-  .suggestions div { padding: 6px; cursor: pointer; }
-  .suggestions div:hover { background: #eee; }
-
-  #tabs { margin-bottom: 20px; }
   #tabs button { padding: 8px 16px; margin-right: 5px; cursor: pointer; }
-  #tabs button.active { background: #007bff; color: white; border: none; }
+  #tabs button.active { background:#007bff; color:white; border:none; }
 
   .author { margin-bottom: 20px; }
-  .work { margin-left: 20px; cursor: pointer; color: blue; text-decoration: underline; }
+  .work { margin-left: 20px; color: blue; cursor: pointer; text-decoration: underline; }
   .work:hover { color: darkblue; }
 
   #citationBox {
@@ -39,6 +24,8 @@
     border: 1px solid #ccc;
     background: #f9f9f9;
   }
+
+  .field-label { font-weight: bold; }
 </style>
 </head>
 
@@ -51,107 +38,61 @@
   <button id="authorsTab">Authors</button>
 </div>
 
-<!-- ================= SEARCH ================= -->
 <div id="searchPage">
-  <h2>Universal Search</h2>
   <input id="universalSearch" placeholder="Search anything">
-
-  <h2>Field Search</h2>
-  <input id="titleSearch" placeholder="Title">
-  <input id="authorSearch" placeholder="Author">
-  <input id="editorSearch" placeholder="Editor">
-  <input id="publisherSearch" placeholder="Publisher">
-  <input id="languageSearch" placeholder="Language">
-  <input id="yearSearch" placeholder="Year">
-  <input id="tagSearch" placeholder="Tag (exact)">
-
   <ul id="results"></ul>
 </div>
 
-<!-- ================= AUTHORS ================= -->
 <div id="authorsPage" style="display:none;">
   <div id="authorsList"></div>
-
   <h2>Citation Info</h2>
-  <div id="citationBox">
-    Click a title to see full citation details.
-  </div>
+  <div id="citationBox">Click a title to see details.</div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 <script>
-let bibEntries = [];
+let entries = [];
 
-/* ---------- LOAD CSV ---------- */
+/* ---------- load CSV ---------- */
 Papa.parse('demo.csv', {
   header: true,
   download: true,
   skipEmptyLines: true,
   complete: function(results) {
-    bibEntries = results.data.map(e => {
-      const manual = e['Manual Tags'] ? e['Manual Tags'].split(/\s*;\s*/) : [];
-      const auto = e['Automatic Tags'] ? e['Automatic Tags'].split(/\s*;\s*/) : [];
-      return {
-        title: e.Title || '',
-        author: e.Author || '',
-        editor: e.Editor || '',
-        publisher: e.Publisher || '',
-        language: e.Language || '',
-        year: e['Publication Year'] || '',
-        url: e.URL || '',
-        tags: [...manual, ...auto]
-      };
-    });
-
-    displaySearchResults(bibEntries);
-    buildAuthorList();
+    entries = results.data;
+    displaySearch(entries);
+    buildAuthors(entries);
   }
 });
 
-/* ---------- SEARCH ---------- */
-document.getElementById('universalSearch').addEventListener('input', e => {
+/* ---------- search ---------- */
+universalSearch.oninput = e => {
   const q = e.target.value.toLowerCase();
-  displaySearchResults(bibEntries.filter(e =>
-    `${e.title} ${e.author} ${e.editor} ${e.publisher} ${e.language} ${e.year} ${e.tags.join(' ')}`.toLowerCase().includes(q)
+  displaySearch(entries.filter(row =>
+    Object.values(row).join(' ').toLowerCase().includes(q)
   ));
-});
+};
 
-[
- 'titleSearch','authorSearch','editorSearch',
- 'publisherSearch','languageSearch','yearSearch','tagSearch'
-].forEach(id =>
-  document.getElementById(id).addEventListener('input', filterEntries)
-);
-
-function filterEntries() {
-  displaySearchResults(bibEntries.filter(e =>
-    e.title.toLowerCase().includes(titleSearch.value.toLowerCase()) &&
-    e.author.toLowerCase().includes(authorSearch.value.toLowerCase()) &&
-    e.editor.toLowerCase().includes(editorSearch.value.toLowerCase()) &&
-    e.publisher.toLowerCase().includes(publisherSearch.value.toLowerCase()) &&
-    e.language.toLowerCase().includes(languageSearch.value.toLowerCase()) &&
-    e.year.toLowerCase().includes(yearSearch.value.toLowerCase()) &&
-    (tagSearch.value ? e.tags.map(t=>t.toLowerCase()).includes(tagSearch.value.toLowerCase()) : true)
-  ));
-}
-
-function displaySearchResults(entries) {
+function displaySearch(list) {
   results.innerHTML = '';
-  entries.forEach(e => {
+  list.forEach(row => {
     const li = document.createElement('li');
-    li.innerHTML = `<strong>${e.title}</strong> — ${e.author || e.editor} (${e.year})`;
+    li.textContent =
+      (row.Title || '[No title]') +
+      ' — ' +
+      (row.Author || row.Editor || 'Unknown');
     results.appendChild(li);
   });
 }
 
-/* ---------- AUTHORS LIST ---------- */
-function buildAuthorList() {
+/* ---------- authors ---------- */
+function buildAuthors(data) {
   const map = {};
-  bibEntries.forEach(e => {
-    e.author.split(/\s*;\s*/).forEach(a => {
+  data.forEach(row => {
+    (row.Author || '').split(/\s*;\s*/).forEach(a => {
       if (!a) return;
-      map[a] = map[a] || [];
-      map[a].push(e);
+      map[a] ??= [];
+      map[a].push(row);
     });
   });
 
@@ -160,55 +101,52 @@ function buildAuthorList() {
     const div = document.createElement('div');
     div.className = 'author';
     div.innerHTML = `<strong>${author}</strong>`;
-
-    map[author].forEach(e => {
+    map[author].forEach(row => {
       const w = document.createElement('div');
       w.className = 'work';
-      w.textContent = e.title;
-      w.onclick = () => showCitation(e);
+      w.textContent = row.Title || '[No title]';
+      w.onclick = () => showCitation(row);
       div.appendChild(w);
     });
-
     authorsList.appendChild(div);
   });
 }
 
-/* ---------- CITATION (ONLY NON-EMPTY FIELDS) ---------- */
-function showCitation(e) {
-  const box = document.getElementById('citationBox');
-  box.innerHTML = '';
+/* ---------- citation (dynamic fields) ---------- */
+function showCitation(row) {
+  citationBox.innerHTML = '';
 
-  const fields = [
-    ['Title', e.title],
-    ['Author', e.author],
-    ['Editor', e.editor],
-    ['Publisher', e.publisher],
-    ['Language', e.language],
-    ['Year', e.year],
-    ['Tags', e.tags.join('; ')],
-    ['URL', e.url ? `<a href="${e.url}" target="_blank">${e.url}</a>` : '']
-  ];
+  Object.entries(row).forEach(([key, rawValue]) => {
+    const value = (rawValue || '').trim();
+    if (!value) return;
 
-  fields.forEach(([label, value]) => {
-    if (value && value.trim() !== '') {
-      const p = document.createElement('p');
-      p.innerHTML = `<strong>${label}:</strong> ${value}`;
-      box.appendChild(p);
-    }
+    const p = document.createElement('p');
+    p.innerHTML = `<span class="field-label">${key}:</span> ${formatValue(key, value)}`;
+    citationBox.appendChild(p);
   });
 }
 
-/* ---------- TABS ---------- */
+/* ---------- formatting ---------- */
+function formatValue(key, value) {
+  const lower = key.toLowerCase();
+
+  if (lower.includes('url') || lower.includes('doi') || lower.includes('link')) {
+    return `<a href="${value}" target="_blank">${value}</a>`;
+  }
+
+  return value;
+}
+
+/* ---------- tabs ---------- */
 searchTab.onclick = () => {
-  searchPage.style.display = 'block';
-  authorsPage.style.display = 'none';
+  searchPage.style.display='block';
+  authorsPage.style.display='none';
   searchTab.classList.add('active');
   authorsTab.classList.remove('active');
 };
-
 authorsTab.onclick = () => {
-  searchPage.style.display = 'none';
-  authorsPage.style.display = 'block';
+  searchPage.style.display='none';
+  authorsPage.style.display='block';
   authorsTab.classList.add('active');
   searchTab.classList.remove('active');
 };
