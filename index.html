@@ -269,8 +269,6 @@ function buildAuthorList() {
       const citationDiv = document.createElement('div');
       citationDiv.className = 'citation-inline';
       citationDiv.style.display = 'none';
-
-      // Only show Suggested Citation
       citationDiv.innerHTML = `<div class="suggested-citation">${e._raw.SuggestedCitation}</div>`;
 
       w.onclick = () => {
