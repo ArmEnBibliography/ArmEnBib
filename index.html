@@ -134,7 +134,7 @@ Papa.parse('demo.csv', {
     bibEntries = results.data.map(e => {
       const manual = e['Manual Tags'] ? e['Manual Tags'].split(/\s*;\s*/) : [];
       const auto = e['Automatic Tags'] ? e['Automatic Tags'].split(/\s*;\s*/) : [];
-      const rawEntry = { ...e, SuggestedCitation: '' };
+      const rawEntry = { ...e };
       const entry = {
         title: e.Title || '',
         author: e.Author || '',
@@ -231,9 +231,7 @@ function displaySearchResults(entries) {
 
   entries.forEach(e => {
     const li = document.createElement('li');
-
     const urlLine = e.url ? `<br><a href="${/^https?:\/\//i.test(e.url) ? e.url : 'https://' + e.url}" target="_blank">${e.url}</a>` : '';
-
     li.innerHTML = `
       <strong>${e.title}</strong> — ${e.author || e.editor} (${e.year})<br>
       ${e.publisher} | ${e.language}<br>
@@ -268,27 +266,12 @@ function buildAuthorList() {
       w.className = 'work';
       w.textContent = e.title;
 
-      // create inline citation div
       const citationDiv = document.createElement('div');
       citationDiv.className = 'citation-inline';
       citationDiv.style.display = 'none';
 
-      Object.entries(e._raw).forEach(([k,v]) => {
-        if (!v || !v.toString().trim()) return;
-        if (k === 'Url') {
-          let link = v.trim();
-          if (!/^https?:\/\//i.test(link)) link = 'https://' + link;
-          citationDiv.innerHTML += `<p><strong>${k}:</strong> <a href="${link}" target="_blank">${v.trim()}</a></p>`;
-        } else {
-          citationDiv.innerHTML += `<p><strong>${k}:</strong> ${v}</p>`;
-        }
-      });
-
-      // add suggested citation under authors
-      const suggestedDiv = document.createElement('div');
-      suggestedDiv.className = 'suggested-citation';
-      suggestedDiv.innerHTML = e._raw.SuggestedCitation;
-      citationDiv.appendChild(suggestedDiv);
+      // Only show Suggested Citation
+      citationDiv.innerHTML = `<div class="suggested-citation">${e._raw.SuggestedCitation}</div>`;
 
       w.onclick = () => {
         citationDiv.style.display = citationDiv.style.display === 'none' ? 'block' : 'none';
