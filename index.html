@@ -102,6 +102,29 @@ li { margin-bottom: 12px; }
 let bibEntries = [];
 let vocab = { author: [], editor: [], publisher: [], language: [], tags: [] };
 
+// ---------- Chicago Citation Generator ----------
+function makeChicagoCitation(entry) {
+  const r = entry._raw;
+  let parts = [];
+  if(r.Author) parts.push(r.Author);
+  if(r.Title) parts.push(`*${r.Title}*`);
+  if(r['Publication Title']) parts.push(r['Publication Title']);
+  if(r.Editor) parts.push(`edited by ${r.Editor}`);
+  if(r.Series) parts.push(`${r.Series}${r['Series Number'] ? ', no. ' + r['Series Number'] : ''}`);
+  if(r.Volume) parts.push(`vol. ${r.Volume}${r['Number Of Volumes'] ? ' of ' + r['Number Of Volumes'] : ''}`);
+  if(r.Place && r.Publisher && r['Publication Year']) parts.push(`(${r.Place}: ${r.Publisher}, ${r['Publication Year']})`);
+  else if(r.Place && r.Publisher) parts.push(`(${r.Place}: ${r.Publisher})`);
+  else if(r.Publisher && r['Publication Year']) parts.push(`(${r.Publisher}, ${r['Publication Year']})`);
+  else if(r['Publication Year']) parts.push(`(${r['Publication Year']})`);
+  if(r.Pages) parts.push(r.Pages);
+  if(r.Url) {
+    let link = r.Url.trim();
+    if(!/^https?:\/\//i.test(link)) link = 'https://' + link;
+    parts.push(`<a href="${link}" target="_blank">${r.Url}</a>`);
+  }
+  return parts.join(', ');
+}
+
 // ---------- LOAD CSV ----------
 Papa.parse('demo.csv', {
   header: true,
@@ -111,7 +134,8 @@ Papa.parse('demo.csv', {
     bibEntries = results.data.map(e => {
       const manual = e['Manual Tags'] ? e['Manual Tags'].split(/\s*;\s*/) : [];
       const auto = e['Automatic Tags'] ? e['Automatic Tags'].split(/\s*;\s*/) : [];
-      return {
+      const rawEntry = { ...e, SuggestedCitation: '' };
+      const entry = {
         title: e.Title || '',
         author: e.Author || '',
         editor: e.Editor || '',
@@ -120,8 +144,10 @@ Papa.parse('demo.csv', {
         year: e['Publication Year'] || '',
         tags: [...manual, ...auto],
         url: (e.Url || '').trim(),
-        _raw: e
+        _raw: rawEntry
       };
+      entry._raw.SuggestedCitation = makeChicagoCitation(entry);
+      return entry;
     });
     initAll();
   }
@@ -198,29 +224,6 @@ function filterEntries() {
   ));
 }
 
-// ---------- SUGGESTED CITATION FUNCTION ----------
-function makeChicagoCitation(entry) {
-  const r = entry._raw;
-  let parts = [];
-  if(r.Author) parts.push(r.Author);
-  if(r.Title) parts.push(`*${r.Title}*`);
-  if(r['Publication Title']) parts.push(r['Publication Title']);
-  if(r.Editor) parts.push(`edited by ${r.Editor}`);
-  if(r.Series) parts.push(`${r.Series}${r['Series Number'] ? ', no. ' + r['Series Number'] : ''}`);
-  if(r.Volume) parts.push(`vol. ${r.Volume}${r['Number Of Volumes'] ? ' of ' + r['Number Of Volumes'] : ''}`);
-  if(r.Place && r.Publisher && r['Publication Year']) parts.push(`(${r.Place}: ${r.Publisher}, ${r['Publication Year']})`);
-  else if(r.Place && r.Publisher) parts.push(`(${r.Place}: ${r.Publisher})`);
-  else if(r.Publisher && r['Publication Year']) parts.push(`(${r.Publisher}, ${r['Publication Year']})`);
-  else if(r['Publication Year']) parts.push(`(${r['Publication Year']})`);
-  if(r.Pages) parts.push(r.Pages);
-  if(r.Url) {
-    let link = r.Url.trim();
-    if(!/^https?:\/\//i.test(link)) link = 'https://' + link;
-    parts.push(`<a href="${link}" target="_blank">${r.Url}</a>`);
-  }
-  return parts.join(', ');
-}
-
 // ---------- DISPLAY SEARCH RESULTS ----------
 function displaySearchResults(entries) {
   const results = document.getElementById('results');
@@ -236,7 +239,7 @@ function displaySearchResults(entries) {
       ${e.publisher} | ${e.language}<br>
       <em>${e.tags.join('; ')}</em>
       ${urlLine}
-      <div class="suggested-citation">${makeChicagoCitation(e)}</div>
+      <div class="suggested-citation">${e._raw.SuggestedCitation}</div>
     `;
     results.appendChild(li);
   });
@@ -284,7 +287,7 @@ function buildAuthorList() {
       // add suggested citation under authors
       const suggestedDiv = document.createElement('div');
       suggestedDiv.className = 'suggested-citation';
-      suggestedDiv.innerHTML = makeChicagoCitation(e);
+      suggestedDiv.innerHTML = e._raw.SuggestedCitation;
       citationDiv.appendChild(suggestedDiv);
 
       w.onclick = () => {
