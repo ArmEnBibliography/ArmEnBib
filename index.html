@@ -233,16 +233,20 @@ function buildAuthorList() {
       w.className = 'work';
       w.textContent = e.title;
 
-      // create a hidden inline citation div directly under this work
+      // create inline citation div
       const citationDiv = document.createElement('div');
       citationDiv.className = 'citation-inline';
       citationDiv.style.display = 'none';
+
       Object.entries(e._raw).forEach(([k,v]) => {
         if (!v || !v.toString().trim()) return;
-        citationDiv.innerHTML += `<p><strong>${k}:</strong> ${v}</p>`;
+        if (k === 'Url') {
+          citationDiv.innerHTML += `<p><strong>${k}:</strong> <a href="${v}" target="_blank">${v}</a></p>`;
+        } else {
+          citationDiv.innerHTML += `<p><strong>${k}:</strong> ${v}</p>`;
+        }
       });
 
-      // toggle on click
       w.onclick = () => {
         citationDiv.style.display = citationDiv.style.display === 'none' ? 'block' : 'none';
       };
