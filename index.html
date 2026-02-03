@@ -3,7 +3,6 @@
 <head>
 <meta charset="UTF-8">
 <title>Bibliography Search & Authors - ArmEn Project</title>
-
 <style>
   body { font-family: sans-serif; padding: 20px; }
   h1 { margin-bottom: 15px; }
@@ -42,7 +41,6 @@
   .field-label { font-weight: bold; }
 </style>
 </head>
-
 <body>
 
 <h1>ArmEn Project Bibliography</h1>
@@ -52,7 +50,7 @@
   <button id="authorsTab">Authors</button>
 </div>
 
-<!-- -------- SEARCH PAGE -------- -->
+<!-- -------- SEARCH PAGE (UNCHANGED) -------- -->
 <div id="searchPage">
   <h2>Universal Search</h2>
   <input type="text" id="universalSearch" placeholder="Type anything (title, author, tag…)">
@@ -82,7 +80,7 @@
 let bibEntries = [];
 let vocab = { author: [], editor: [], publisher: [], language: [], tags: [] };
 
-/* ---------- LOAD CSV ---------- */
+// ---- LOAD CSV ----
 Papa.parse('demo.csv', {
   header: true,
   download: true,
@@ -101,14 +99,14 @@ Papa.parse('demo.csv', {
         language: e.Language || '',
         year: e['Publication Year'] || '',
         tags,
-        _raw: e   // 🔴 KEEP FULL ROW HERE
+        _raw: e   // ⭐ store FULL Zotero row
       };
     });
     initAll();
   }
 });
 
-/* ---------- INIT ---------- */
+// ---- INIT EVERYTHING ----
 function initAll() {
   buildVocab();
   setupAutocompleteFields();
@@ -116,7 +114,7 @@ function initAll() {
   buildAuthorList();
 }
 
-/* ---------- VOCAB ---------- */
+// ---- BUILD VOCAB ----
 function buildVocab() {
   vocab.author = [...new Set(bibEntries.map(e => e.author).filter(Boolean))];
   vocab.editor = [...new Set(bibEntries.map(e => e.editor).filter(Boolean))];
@@ -125,7 +123,7 @@ function buildVocab() {
   vocab.tags = [...new Set(bibEntries.flatMap(e => e.tags))];
 }
 
-/* ---------- AUTOCOMPLETE ---------- */
+// ---- AUTOCOMPLETE ----
 function setupAutocomplete(inputId, suggestionId, values) {
   const input = document.getElementById(inputId);
   const box = document.getElementById(suggestionId);
@@ -138,11 +136,7 @@ function setupAutocomplete(inputId, suggestionId, values) {
     values.filter(v => v.toLowerCase().includes(q)).slice(0,10).forEach(v => {
       const div = document.createElement('div');
       div.textContent = v;
-      div.onclick = () => {
-        input.value = v;
-        box.innerHTML = '';
-        filterEntries();
-      };
+      div.onclick = () => { input.value = v; box.innerHTML = ''; filterEntries(); };
       box.appendChild(div);
     });
   });
@@ -160,7 +154,7 @@ function setupAutocompleteFields() {
   setupAutocomplete('tagSearch','tagSuggestions',vocab.tags);
 }
 
-/* ---------- SEARCH ---------- */
+// ---- SEARCH LOGIC (UNCHANGED) ----
 document.getElementById('universalSearch').addEventListener('input', e => {
   const q = e.target.value.toLowerCase();
   displaySearchResults(bibEntries.filter(e =>
@@ -203,42 +197,45 @@ function displaySearchResults(entries) {
   });
 }
 
-/* ---------- AUTHORS ---------- */
+// ---- AUTHOR LIST ----
 function buildAuthorList() {
-  const map = {};
-  bibEntries.forEach(e => {
-    e.author.split(/\s*;\s*/).forEach(a => {
-      if (!a) return;
-      map[a] ??= [];
-      map[a].push(e);
+  const authorsMap = {};
+  bibEntries.forEach(entry => {
+    const authors = entry.author ? entry.author.split(/\s*;\s*/) : [];
+    authors.forEach(author => {
+      if (!authorsMap[author]) authorsMap[author] = [];
+      authorsMap[author].push(entry);
     });
   });
 
-  authorsList.innerHTML = '';
-  Object.keys(map).sort().forEach(author => {
-    const div = document.createElement('div');
-    div.className = 'author';
-    div.innerHTML = `<strong>${author}</strong>`;
+  const authorsDiv = document.getElementById('authorsList');
+  authorsDiv.innerHTML = '';
 
-    map[author].forEach(e => {
-      const w = document.createElement('div');
-      w.className = 'work';
-      w.textContent = e.title;
-      w.onclick = () => showCitation(e._raw);
-      div.appendChild(w);
+  Object.keys(authorsMap).sort().forEach(author => {
+    const authorDiv = document.createElement('div');
+    authorDiv.className = 'author';
+    authorDiv.innerHTML = `<strong>${author}</strong>`;
+
+    authorsMap[author].forEach(entry => {
+      const workDiv = document.createElement('div');
+      workDiv.className = 'work';
+      workDiv.textContent = entry.title;
+      workDiv.onclick = () => showCitation(entry._raw);
+      authorDiv.appendChild(workDiv);
     });
 
-    authorsList.appendChild(div);
+    authorsDiv.appendChild(authorDiv);
   });
 }
 
-/* ---------- CITATION (ALL NON-EMPTY FIELDS, URL INCLUDED) ---------- */
+// ---- CITATION: ALL NON-EMPTY FIELDS (URL INCLUDED) ----
 function showCitation(row) {
   const box = document.getElementById('citationBox');
   box.innerHTML = '';
 
   Object.entries(row).forEach(([key, raw]) => {
     if (!raw) return;
+
     const value = raw.toString().replace(/\s+/g,' ').trim();
     if (!value) return;
 
@@ -258,7 +255,7 @@ function renderValue(key, value) {
   return value;
 }
 
-/* ---------- TABS ---------- */
+// ---- TABS ----
 searchTab.onclick = () => {
   searchPage.style.display='block';
   authorsPage.style.display='none';
