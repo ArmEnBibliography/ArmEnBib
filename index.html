@@ -28,6 +28,14 @@ li { margin-bottom: 12px; }
 .work { margin-left: 20px; cursor: pointer; color: blue; text-decoration: underline; }
 .work:hover { color: darkblue; }
 
+.citation-inline {
+  margin-left: 40px;
+  margin-top: 5px;
+  padding: 5px;
+  border-left: 2px solid #ccc;
+  background: #f9f9f9;
+}
+
 #tabs { margin-bottom: 20px; }
 #tabs button { padding: 10px 20px; margin-right: 5px; cursor: pointer; }
 #tabs button.active { background-color: #007bff; color: white; border: none; }
@@ -225,21 +233,16 @@ function buildAuthorList() {
       w.className = 'work';
       w.textContent = e.title;
 
-      // create a hidden citation div right under the work
+      // create a hidden inline citation div directly under this work
       const citationDiv = document.createElement('div');
+      citationDiv.className = 'citation-inline';
       citationDiv.style.display = 'none';
-      citationDiv.style.marginLeft = '30px';
-      citationDiv.style.marginTop = '5px';
-      citationDiv.style.padding = '5px';
-      citationDiv.style.borderLeft = '2px solid #ccc';
-      citationDiv.style.background = '#f9f9f9';
-
       Object.entries(e._raw).forEach(([k,v]) => {
         if (!v || !v.toString().trim()) return;
         citationDiv.innerHTML += `<p><strong>${k}:</strong> ${v}</p>`;
       });
 
-      // click toggles the citation directly under the work
+      // toggle on click
       w.onclick = () => {
         citationDiv.style.display = citationDiv.style.display === 'none' ? 'block' : 'none';
       };
