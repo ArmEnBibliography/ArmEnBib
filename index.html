@@ -2,45 +2,45 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Bibliography Search & Authors - ArmEn Project</title>
+<title>Bibliography Search & Authors – ArmEn Project</title>
+
 <style>
-  body { font-family: sans-serif; padding: 20px; }
-  h1 { margin-bottom: 15px; }
-  h2 { margin-top: 30px; }
-  input { padding: 6px; margin: 5px; width: 260px; }
-  li { margin-bottom: 10px; }
+body { font-family: sans-serif; padding: 20px; }
+h1 { margin-bottom: 15px; }
+h2 { margin-top: 30px; }
+input { padding: 6px; margin: 5px; width: 260px; }
+li { margin-bottom: 12px; }
 
-  .autocomplete { position: relative; display: inline-block; }
-  .suggestions {
-    position: absolute;
-    background: white;
-    border: 1px solid #ccc;
-    max-height: 150px;
-    overflow-y: auto;
-    width: 260px;
-    z-index: 1000;
-  }
-  .suggestions div { padding: 6px; cursor: pointer; }
-  .suggestions div:hover { background: #eee; }
+.autocomplete { position: relative; display: inline-block; }
+.suggestions {
+  position: absolute;
+  background: white;
+  border: 1px solid #ccc;
+  max-height: 150px;
+  overflow-y: auto;
+  width: 260px;
+  z-index: 1000;
+}
+.suggestions div { padding: 6px; cursor: pointer; }
+.suggestions div:hover { background: #eee; }
 
-  .author { margin-bottom: 20px; }
-  .work { margin-left: 20px; cursor: pointer; color: blue; text-decoration: underline; }
-  .work:hover { color: darkblue; }
+.author { margin-bottom: 20px; }
+.work { margin-left: 20px; cursor: pointer; color: blue; text-decoration: underline; }
+.work:hover { color: darkblue; }
 
-  #citationBox {
-    margin-top: 30px;
-    padding: 10px;
-    border: 1px solid #ccc;
-    background: #f9f9f9;
-  }
+#citationBox {
+  margin-top: 30px;
+  padding: 10px;
+  border: 1px solid #ccc;
+  background: #f9f9f9;
+}
 
-  #tabs { margin-bottom: 20px; }
-  #tabs button { padding: 10px 20px; margin-right: 5px; cursor: pointer; }
-  #tabs button.active { background-color: #007bff; color: white; border: none; }
-
-  .field-label { font-weight: bold; }
+#tabs { margin-bottom: 20px; }
+#tabs button { padding: 10px 20px; margin-right: 5px; cursor: pointer; }
+#tabs button.active { background-color: #007bff; color: white; border: none; }
 </style>
 </head>
+
 <body>
 
 <h1>ArmEn Project Bibliography</h1>
@@ -50,25 +50,41 @@
   <button id="authorsTab">Authors</button>
 </div>
 
-<!-- -------- SEARCH PAGE (UNCHANGED) -------- -->
+<!-- ================= SEARCH PAGE ================= -->
 <div id="searchPage">
-  <h2>Universal Search</h2>
-  <input type="text" id="universalSearch" placeholder="Type anything (title, author, tag…)">
 
-  <h2>Field-specific Search</h2>
+<h2>Universal Search</h2>
+<input type="text" id="universalSearch" placeholder="Type anything (title, author, tag…)">
 
-  <div class="autocomplete"><input id="titleSearch" placeholder="Title"></div>
-  <div class="autocomplete"><input id="authorSearch" placeholder="Author"><div class="suggestions" id="authorSuggestions"></div></div>
-  <div class="autocomplete"><input id="editorSearch" placeholder="Editor"><div class="suggestions" id="editorSuggestions"></div></div>
-  <div class="autocomplete"><input id="publisherSearch" placeholder="Publisher"><div class="suggestions" id="publisherSuggestions"></div></div>
-  <div class="autocomplete"><input id="languageSearch" placeholder="Language"><div class="suggestions" id="languageSuggestions"></div></div>
-  <div class="autocomplete"><input id="yearSearch" placeholder="Year"></div>
-  <div class="autocomplete"><input id="tagSearch" placeholder="Tag (exact)"><div class="suggestions" id="tagSuggestions"></div></div>
+<h2>Field-specific Search</h2>
 
-  <ul id="results"></ul>
+<div class="autocomplete"><input id="titleSearch" placeholder="Title"></div>
+<div class="autocomplete">
+  <input id="authorSearch" placeholder="Author">
+  <div class="suggestions" id="authorSuggestions"></div>
+</div>
+<div class="autocomplete">
+  <input id="editorSearch" placeholder="Editor">
+  <div class="suggestions" id="editorSuggestions"></div>
+</div>
+<div class="autocomplete">
+  <input id="publisherSearch" placeholder="Publisher">
+  <div class="suggestions" id="publisherSuggestions"></div>
+</div>
+<div class="autocomplete">
+  <input id="languageSearch" placeholder="Language">
+  <div class="suggestions" id="languageSuggestions"></div>
+</div>
+<div class="autocomplete"><input id="yearSearch" placeholder="Year"></div>
+<div class="autocomplete">
+  <input id="tagSearch" placeholder="Tag (exact)">
+  <div class="suggestions" id="tagSuggestions"></div>
 </div>
 
-<!-- -------- AUTHORS PAGE -------- -->
+<ul id="results"></ul>
+</div>
+
+<!-- ================= AUTHORS PAGE ================= -->
 <div id="authorsPage" style="display:none;">
   <div id="authorsList"></div>
   <h2>Citation Info</h2>
@@ -76,11 +92,12 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+
 <script>
 let bibEntries = [];
 let vocab = { author: [], editor: [], publisher: [], language: [], tags: [] };
 
-// ---- LOAD CSV ----
+// ---------- LOAD CSV ----------
 Papa.parse('demo.csv', {
   header: true,
   download: true,
@@ -89,8 +106,6 @@ Papa.parse('demo.csv', {
     bibEntries = results.data.map(e => {
       const manual = e['Manual Tags'] ? e['Manual Tags'].split(/\s*;\s*/) : [];
       const auto = e['Automatic Tags'] ? e['Automatic Tags'].split(/\s*;\s*/) : [];
-      const tags = [...manual, ...auto];
-
       return {
         title: e.Title || '',
         author: e.Author || '',
@@ -98,15 +113,16 @@ Papa.parse('demo.csv', {
         publisher: e.Publisher || '',
         language: e.Language || '',
         year: e['Publication Year'] || '',
-        tags,
-        _raw: e   // ⭐ store FULL Zotero row
+        tags: [...manual, ...auto],
+        url: (e.Url || '').trim(),
+        _raw: e
       };
     });
     initAll();
   }
 });
 
-// ---- INIT EVERYTHING ----
+// ---------- INIT ----------
 function initAll() {
   buildVocab();
   setupAutocompleteFields();
@@ -114,7 +130,7 @@ function initAll() {
   buildAuthorList();
 }
 
-// ---- BUILD VOCAB ----
+// ---------- VOCAB ----------
 function buildVocab() {
   vocab.author = [...new Set(bibEntries.map(e => e.author).filter(Boolean))];
   vocab.editor = [...new Set(bibEntries.map(e => e.editor).filter(Boolean))];
@@ -123,16 +139,14 @@ function buildVocab() {
   vocab.tags = [...new Set(bibEntries.flatMap(e => e.tags))];
 }
 
-// ---- AUTOCOMPLETE ----
+// ---------- AUTOCOMPLETE ----------
 function setupAutocomplete(inputId, suggestionId, values) {
   const input = document.getElementById(inputId);
   const box = document.getElementById(suggestionId);
-
   input.addEventListener('input', () => {
     box.innerHTML = '';
     const q = input.value.toLowerCase();
     if (!q) return;
-
     values.filter(v => v.toLowerCase().includes(q)).slice(0,10).forEach(v => {
       const div = document.createElement('div');
       div.textContent = v;
@@ -140,10 +154,7 @@ function setupAutocomplete(inputId, suggestionId, values) {
       box.appendChild(div);
     });
   });
-
-  document.addEventListener('click', e => {
-    if (!input.contains(e.target)) box.innerHTML = '';
-  });
+  document.addEventListener('click', e => { if (!input.contains(e.target)) box.innerHTML = ''; });
 }
 
 function setupAutocompleteFields() {
@@ -154,7 +165,7 @@ function setupAutocompleteFields() {
   setupAutocomplete('tagSearch','tagSuggestions',vocab.tags);
 }
 
-// ---- SEARCH LOGIC (UNCHANGED) ----
+// ---------- SEARCH ----------
 document.getElementById('universalSearch').addEventListener('input', e => {
   const q = e.target.value.toLowerCase();
   displaySearchResults(bibEntries.filter(e =>
@@ -182,89 +193,72 @@ function filterEntries() {
   ));
 }
 
-['titleSearch','authorSearch','editorSearch','publisherSearch','languageSearch','yearSearch','tagSearch']
-  .forEach(id => document.getElementById(id).addEventListener('input', filterEntries));
-
+// ---------- DISPLAY SEARCH RESULTS ----------
 function displaySearchResults(entries) {
   const results = document.getElementById('results');
   results.innerHTML = '';
+
   entries.forEach(e => {
     const li = document.createElement('li');
-    li.innerHTML = `<strong>${e.title}</strong> — ${e.author || e.editor} (${e.year})<br>
-    ${e.publisher} | ${e.language}<br>
-    <em>${e.tags.join('; ')}</em>`;
+    const urlLine = e.url ? `<br><a href="${e.url}" target="_blank">${e.url}</a>` : '';
+
+    li.innerHTML = `
+      <strong>${e.title}</strong> — ${e.author || e.editor} (${e.year})<br>
+      ${e.publisher} | ${e.language}<br>
+      <em>${e.tags.join('; ')}</em>
+      ${urlLine}
+    `;
     results.appendChild(li);
   });
 }
 
-// ---- AUTHOR LIST ----
+// ---------- AUTHORS ----------
 function buildAuthorList() {
-  const authorsMap = {};
-  bibEntries.forEach(entry => {
-    const authors = entry.author ? entry.author.split(/\s*;\s*/) : [];
-    authors.forEach(author => {
-      if (!authorsMap[author]) authorsMap[author] = [];
-      authorsMap[author].push(entry);
+  const map = {};
+  bibEntries.forEach(e => {
+    (e.author ? e.author.split(/\s*;\s*/) : []).forEach(a => {
+      if (!map[a]) map[a] = [];
+      map[a].push(e);
     });
   });
 
-  const authorsDiv = document.getElementById('authorsList');
-  authorsDiv.innerHTML = '';
+  const container = document.getElementById('authorsList');
+  container.innerHTML = '';
 
-  Object.keys(authorsMap).sort().forEach(author => {
-    const authorDiv = document.createElement('div');
-    authorDiv.className = 'author';
-    authorDiv.innerHTML = `<strong>${author}</strong>`;
-
-    authorsMap[author].forEach(entry => {
-      const workDiv = document.createElement('div');
-      workDiv.className = 'work';
-      workDiv.textContent = entry.title;
-      workDiv.onclick = () => showCitation(entry._raw);
-      authorDiv.appendChild(workDiv);
+  Object.keys(map).sort().forEach(author => {
+    const d = document.createElement('div');
+    d.className = 'author';
+    d.innerHTML = `<strong>${author}</strong>`;
+    map[author].forEach(e => {
+      const w = document.createElement('div');
+      w.className = 'work';
+      w.textContent = e.title;
+      w.onclick = () => showCitation(e);
+      d.appendChild(w);
     });
-
-    authorsDiv.appendChild(authorDiv);
+    container.appendChild(d);
   });
 }
 
-// ---- CITATION: ALL NON-EMPTY FIELDS (URL INCLUDED) ----
-function showCitation(row) {
-  const box = document.getElementById('citationBox');
-  box.innerHTML = '';
-
-  Object.entries(row).forEach(([key, raw]) => {
-    if (!raw) return;
-
-    const value = raw.toString().replace(/\s+/g,' ').trim();
-    if (!value) return;
-
-    const p = document.createElement('p');
-    p.innerHTML = `<span class="field-label">${key}:</span> ${renderValue(key, value)}`;
-    box.appendChild(p);
+function showCitation(e) {
+  citationBox.innerHTML = '';
+  Object.entries(e._raw).forEach(([k,v]) => {
+    if (!v || !v.toString().trim()) return;
+    citationBox.innerHTML += `<p><strong>${k}:</strong> ${v}</p>`;
   });
 }
 
-function renderValue(key, value) {
-  const k = key.toLowerCase();
-  if (k === 'url' || k.includes('doi') || k.includes('link')) {
-    return value.split(/\s*;\s*/).map(v =>
-      `<a href="${v}" target="_blank">${v}</a>`
-    ).join('<br>');
-  }
-  return value;
-}
-
-// ---- TABS ----
+// ---------- TABS ----------
 searchTab.onclick = () => {
-  searchPage.style.display='block';
-  authorsPage.style.display='none';
+  searchPage.style.display = 'block';
+  authorsPage.style.display = 'none';
   searchTab.classList.add('active');
   authorsTab.classList.remove('active');
 };
+
 authorsTab.onclick = () => {
-  searchPage.style.display='none';
-  authorsPage.style.display='block';
+  searchPage.style.display = 'none';
+  authorsPage.style.display = 'block';
   authorsTab.classList.add('active');
   searchTab.classList.remove('active');
 };
