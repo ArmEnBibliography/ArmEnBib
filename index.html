@@ -28,13 +28,6 @@ li { margin-bottom: 12px; }
 .work { margin-left: 20px; cursor: pointer; color: blue; text-decoration: underline; }
 .work:hover { color: darkblue; }
 
-#citationBox {
-  margin-top: 30px;
-  padding: 10px;
-  border: 1px solid #ccc;
-  background: #f9f9f9;
-}
-
 #tabs { margin-bottom: 20px; }
 #tabs button { padding: 10px 20px; margin-right: 5px; cursor: pointer; }
 #tabs button.active { background-color: #007bff; color: white; border: none; }
@@ -87,8 +80,6 @@ li { margin-bottom: 12px; }
 <!-- ================= AUTHORS PAGE ================= -->
 <div id="authorsPage" style="display:none;">
   <div id="authorsList"></div>
-  <h2>Citation Info</h2>
-  <div id="citationBox">Click on a work to see full citation info here.</div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
@@ -228,22 +219,36 @@ function buildAuthorList() {
     const d = document.createElement('div');
     d.className = 'author';
     d.innerHTML = `<strong>${author}</strong>`;
+
     map[author].forEach(e => {
       const w = document.createElement('div');
       w.className = 'work';
       w.textContent = e.title;
-      w.onclick = () => showCitation(e);
-      d.appendChild(w);
-    });
-    container.appendChild(d);
-  });
-}
 
-function showCitation(e) {
-  citationBox.innerHTML = '';
-  Object.entries(e._raw).forEach(([k,v]) => {
-    if (!v || !v.toString().trim()) return;
-    citationBox.innerHTML += `<p><strong>${k}:</strong> ${v}</p>`;
+      // create a hidden citation div right under the work
+      const citationDiv = document.createElement('div');
+      citationDiv.style.display = 'none';
+      citationDiv.style.marginLeft = '30px';
+      citationDiv.style.marginTop = '5px';
+      citationDiv.style.padding = '5px';
+      citationDiv.style.borderLeft = '2px solid #ccc';
+      citationDiv.style.background = '#f9f9f9';
+
+      Object.entries(e._raw).forEach(([k,v]) => {
+        if (!v || !v.toString().trim()) return;
+        citationDiv.innerHTML += `<p><strong>${k}:</strong> ${v}</p>`;
+      });
+
+      // click toggles the citation directly under the work
+      w.onclick = () => {
+        citationDiv.style.display = citationDiv.style.display === 'none' ? 'block' : 'none';
+      };
+
+      d.appendChild(w);
+      d.appendChild(citationDiv);
+    });
+
+    container.appendChild(d);
   });
 }
 
