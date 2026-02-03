@@ -9,7 +9,11 @@
   h1 { margin-bottom: 15px; }
   h2 { margin-top: 30px; }
 
-  input { padding: 6px; margin: 6px 0; width: 300px; }
+  input {
+    padding: 6px;
+    margin: 6px 0;
+    width: 300px;
+  }
 
   #tabs button {
     padding: 8px 16px;
@@ -23,7 +27,7 @@
   }
 
   ul { list-style: none; padding-left: 0; }
-  li { margin-bottom: 8px; }
+  li { margin-bottom: 10px; }
 
   .author { margin-bottom: 20px; }
   .work {
@@ -40,9 +44,7 @@
     background: #f9f9f9;
   }
 
-  .field-label {
-    font-weight: bold;
-  }
+  .field-label { font-weight: bold; }
 </style>
 </head>
 
@@ -57,7 +59,7 @@
 
 <!-- SEARCH PAGE -->
 <div id="searchPage">
-  <input id="searchBox" placeholder="Search anything">
+  <input id="universalSearch" placeholder="Type anything (title, author, tag…)">
   <ul id="results"></ul>
 </div>
 
@@ -79,27 +81,29 @@ Papa.parse('demo.csv', {
   skipEmptyLines: true,
   complete: function(res) {
     entries = res.data;
-    showSearch(entries);
+    displaySearch(entries);
     buildAuthors(entries);
   }
 });
 
-/* ---------- SEARCH ---------- */
-searchBox.oninput = e => {
+/* ---------- ORIGINAL UNIVERSAL SEARCH (RESTORED) ---------- */
+document.getElementById('universalSearch').addEventListener('input', e => {
   const q = e.target.value.toLowerCase();
-  showSearch(entries.filter(row =>
-    Object.values(row).join(' ').toLowerCase().includes(q)
+  displaySearch(entries.filter(row =>
+    Object.values(row)
+      .join(' ')
+      .toLowerCase()
+      .includes(q)
   ));
-};
+});
 
-function showSearch(list) {
+function displaySearch(list) {
   results.innerHTML = '';
   list.forEach(row => {
     const li = document.createElement('li');
-    li.textContent =
-      (row.Title || '[No title]') +
-      ' — ' +
-      (row.Author || row.Editor || 'Unknown');
+    li.innerHTML = `<strong>${row.Title || '[No title]'}</strong>
+      — ${row.Author || row.Editor || 'Unknown'}
+      ${row['Publication Year'] ? '(' + row['Publication Year'] + ')' : ''}`;
     results.appendChild(li);
   });
 }
@@ -136,20 +140,20 @@ function buildAuthors(data) {
   });
 }
 
-/* ---------- CITATION (ALL FIELDS, URL INCLUDED) ---------- */
+/* ---------- CITATION INFO (ALL NON-EMPTY FIELDS) ---------- */
 function showCitation(row) {
   citationBox.innerHTML = '';
 
   Object.keys(row).forEach(key => {
     const raw = row[key];
-
-    if (raw === null || raw === undefined) return;
+    if (!raw) return;
 
     const value = raw.toString().replace(/\s+/g,' ').trim();
-    if (value === '') return;
+    if (!value) return;
 
     const p = document.createElement('p');
-    p.innerHTML = `<span class="field-label">${key}:</span> ${renderValue(key, value)}`;
+    p.innerHTML =
+      `<span class="field-label">${key}:</span> ${renderValue(key, value)}`;
     citationBox.appendChild(p);
   });
 }
