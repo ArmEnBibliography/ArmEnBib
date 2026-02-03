@@ -199,7 +199,7 @@ function displaySearchResults(entries) {
 
   entries.forEach(e => {
     const li = document.createElement('li');
-    const urlLine = e.url ? `<br><a href="${e.url}" target="_blank">${e.url}</a>` : '';
+    const urlLine = e.url ? `<br><a href="${/^https?:\/\//i.test(e.url) ? e.url : 'https://' + e.url}" target="_blank">${e.url}</a>` : '';
     li.innerHTML = `
       <strong>${e.title}</strong> — ${e.author || e.editor} (${e.year})<br>
       ${e.publisher} | ${e.language}<br>
@@ -241,7 +241,9 @@ function buildAuthorList() {
       Object.entries(e._raw).forEach(([k,v]) => {
         if (!v || !v.toString().trim()) return;
         if (k === 'Url') {
-          citationDiv.innerHTML += `<p><strong>${k}:</strong> <a href="${v}" target="_blank">${v}</a></p>`;
+          let link = v.trim();
+          if (!/^https?:\/\//i.test(link)) link = 'https://' + link;
+          citationDiv.innerHTML += `<p><strong>${k}:</strong> <a href="${link}" target="_blank">${v.trim()}</a></p>`;
         } else {
           citationDiv.innerHTML += `<p><strong>${k}:</strong> ${v}</p>`;
         }
