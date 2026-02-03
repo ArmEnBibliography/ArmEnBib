@@ -45,9 +45,6 @@ li { margin-bottom: 12px; }
   font-style: normal;
   color: #333;
 }
-.suggested-citation b {
-  font-weight: bold;
-}
 </style>
 </head>
 
@@ -105,7 +102,7 @@ li { margin-bottom: 12px; }
 let bibEntries = [];
 let vocab = { author: [], editor: [], publisher: [], language: [], tags: [] };
 
-// ---------- Chicago Citation Generator ----------
+// ---------- Chicago Citation Generator (no URL) ----------
 function makeChicagoCitation(entry) {
   const r = entry._raw;
   let parts = [];
@@ -120,11 +117,6 @@ function makeChicagoCitation(entry) {
   else if(r.Publisher && r['Publication Year']) parts.push(`(${r.Publisher}, ${r['Publication Year']})`);
   else if(r['Publication Year']) parts.push(`(${r['Publication Year']})`);
   if(r.Pages) parts.push(r.Pages);
-  if(r.Url) {
-    let link = r.Url.trim();
-    if(!/^https?:\/\//i.test(link)) link = 'https://' + link;
-    parts.push(`<a href="${link}" target="_blank">${r.Url}</a>`);
-  }
   return `<b>Suggested Citation:</b> ` + parts.join(', ');
 }
 
@@ -234,12 +226,10 @@ function displaySearchResults(entries) {
 
   entries.forEach(e => {
     const li = document.createElement('li');
-    const urlLine = e.url ? `<br><a href="${/^https?:\/\//i.test(e.url) ? e.url : 'https://' + e.url}" target="_blank">${e.url}</a>` : '';
     li.innerHTML = `
       <strong>${e.title}</strong> — ${e.author || e.editor} (${e.year})<br>
       ${e.publisher} | ${e.language}<br>
       <em>${e.tags.join('; ')}</em>
-      ${urlLine}
       <div class="suggested-citation">${e._raw.SuggestedCitation}</div>
     `;
     results.appendChild(li);
@@ -273,15 +263,13 @@ function buildAuthorList() {
       citationDiv.className = 'citation-inline';
       citationDiv.style.display = 'none';
 
-      // All fields + Suggested Citation on top
+      // Fields under authors: Author first, then Title, then rest
       let fieldsHtml = '';
       const raw = e._raw;
-      const keys = ['Author','Editor','Publisher','Place','Publication Year','Language','Tags','Url','Title'];
+      const keys = ['Author','Title','Editor','Publisher','Place','Publication Year','Language','Tags'];
       keys.forEach(k => {
         if(raw[k] && raw[k].trim() !== '') {
-          let val = raw[k];
-          if(k === 'Url') val = `<a href="${/^https?:\/\//i.test(val) ? val : 'https://' + val}" target="_blank">${val}</a>`;
-          fieldsHtml += `<strong>${k}:</strong> ${val} <br>`;
+          fieldsHtml += `<strong>${k}:</strong> ${raw[k]} <br>`;
         }
       });
 
