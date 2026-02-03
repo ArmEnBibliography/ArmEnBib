@@ -39,6 +39,12 @@ li { margin-bottom: 12px; }
 #tabs { margin-bottom: 20px; }
 #tabs button { padding: 10px 20px; margin-right: 5px; cursor: pointer; }
 #tabs button.active { background-color: #007bff; color: white; border: none; }
+
+.suggested-citation {
+  margin-top: 5px;
+  font-style: italic;
+  color: #333;
+}
 </style>
 </head>
 
@@ -192,6 +198,29 @@ function filterEntries() {
   ));
 }
 
+// ---------- SUGGESTED CITATION FUNCTION ----------
+function makeChicagoCitation(entry) {
+  const r = entry._raw;
+  let parts = [];
+  if(r.Author) parts.push(r.Author);
+  if(r.Title) parts.push(`*${r.Title}*`);
+  if(r['Publication Title']) parts.push(r['Publication Title']);
+  if(r.Editor) parts.push(`edited by ${r.Editor}`);
+  if(r.Series) parts.push(`${r.Series}${r['Series Number'] ? ', no. ' + r['Series Number'] : ''}`);
+  if(r.Volume) parts.push(`vol. ${r.Volume}${r['Number Of Volumes'] ? ' of ' + r['Number Of Volumes'] : ''}`);
+  if(r.Place && r.Publisher && r['Publication Year']) parts.push(`(${r.Place}: ${r.Publisher}, ${r['Publication Year']})`);
+  else if(r.Place && r.Publisher) parts.push(`(${r.Place}: ${r.Publisher})`);
+  else if(r.Publisher && r['Publication Year']) parts.push(`(${r.Publisher}, ${r['Publication Year']})`);
+  else if(r['Publication Year']) parts.push(`(${r['Publication Year']})`);
+  if(r.Pages) parts.push(r.Pages);
+  if(r.Url) {
+    let link = r.Url.trim();
+    if(!/^https?:\/\//i.test(link)) link = 'https://' + link;
+    parts.push(`<a href="${link}" target="_blank">${r.Url}</a>`);
+  }
+  return parts.join(', ');
+}
+
 // ---------- DISPLAY SEARCH RESULTS ----------
 function displaySearchResults(entries) {
   const results = document.getElementById('results');
@@ -199,12 +228,15 @@ function displaySearchResults(entries) {
 
   entries.forEach(e => {
     const li = document.createElement('li');
+
     const urlLine = e.url ? `<br><a href="${/^https?:\/\//i.test(e.url) ? e.url : 'https://' + e.url}" target="_blank">${e.url}</a>` : '';
+
     li.innerHTML = `
       <strong>${e.title}</strong> — ${e.author || e.editor} (${e.year})<br>
       ${e.publisher} | ${e.language}<br>
       <em>${e.tags.join('; ')}</em>
       ${urlLine}
+      <div class="suggested-citation">${makeChicagoCitation(e)}</div>
     `;
     results.appendChild(li);
   });
@@ -248,6 +280,12 @@ function buildAuthorList() {
           citationDiv.innerHTML += `<p><strong>${k}:</strong> ${v}</p>`;
         }
       });
+
+      // add suggested citation under authors
+      const suggestedDiv = document.createElement('div');
+      suggestedDiv.className = 'suggested-citation';
+      suggestedDiv.innerHTML = makeChicagoCitation(e);
+      citationDiv.appendChild(suggestedDiv);
 
       w.onclick = () => {
         citationDiv.style.display = citationDiv.style.display === 'none' ? 'block' : 'none';
