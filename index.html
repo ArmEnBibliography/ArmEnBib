@@ -269,7 +269,20 @@ function buildAuthorList() {
       const citationDiv = document.createElement('div');
       citationDiv.className = 'citation-inline';
       citationDiv.style.display = 'none';
-      citationDiv.innerHTML = `<div class="suggested-citation">${e._raw.SuggestedCitation}</div>`;
+
+      // Build full info under authors with Suggested Citation at top
+      let fieldsHtml = '';
+      const raw = e._raw;
+      const keys = ['Author','Editor','Publisher','Place','Publication Year','Language','Tags','Url','Title'];
+      keys.forEach(k => {
+        if(raw[k] && raw[k].trim() !== '') {
+          let val = raw[k];
+          if(k === 'Url') val = `<a href="${/^https?:\/\//i.test(val) ? val : 'https://' + val}" target="_blank">${val}</a>`;
+          fieldsHtml += `<strong>${k}:</strong> ${val} <br>`;
+        }
+      });
+
+      citationDiv.innerHTML = `<div class="suggested-citation">${e._raw.SuggestedCitation}</div>${fieldsHtml}`;
 
       w.onclick = () => {
         citationDiv.style.display = citationDiv.style.display === 'none' ? 'block' : 'none';
