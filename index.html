@@ -270,7 +270,7 @@ function buildAuthorList() {
       citationDiv.className = 'citation-inline';
       citationDiv.style.display = 'none';
 
-      // Build full info under authors with Suggested Citation at top
+      // Keep all previous fields and add Suggested Citation on top
       let fieldsHtml = '';
       const raw = e._raw;
       const keys = ['Author','Editor','Publisher','Place','Publication Year','Language','Tags','Url','Title'];
@@ -297,6 +297,11 @@ function buildAuthorList() {
 }
 
 // ---------- TABS ----------
+const searchTab = document.getElementById('searchTab');
+const authorsTab = document.getElementById('authorsTab');
+const searchPage = document.getElementById('searchPage');
+const authorsPage = document.getElementById('authorsPage');
+
 searchTab.onclick = () => {
   searchPage.style.display = 'block';
   authorsPage.style.display = 'none';
