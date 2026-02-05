@@ -9,7 +9,7 @@ body { font-family: sans-serif; padding: 20px; }
 h1 { margin-bottom: 15px; }
 h2 { margin-top: 30px; }
 input { padding: 6px; margin: 5px; width: 260px; }
-li { margin-bottom: 12px; }
+li { margin-bottom: 25px; }
 
 .autocomplete { position: relative; display: inline-block; }
 .suggestions {
@@ -41,9 +41,17 @@ li { margin-bottom: 12px; }
 #tabs button.active { background-color: #007bff; color: white; border: none; }
 
 .suggested-citation {
-  margin-top: 5px;
-  font-style: normal;
+  margin-top: 8px;
+  margin-bottom: 10px;
   color: #333;
+}
+
+.field-list {
+  margin-left: 15px;
+  font-size: 0.95em;
+}
+.field-list div {
+  margin-bottom: 3px;
 }
 </style>
 </head>
@@ -91,7 +99,7 @@ li { margin-bottom: 12px; }
 <ul id="results"></ul>
 </div>
 
-<!-- ================= AUTHORS PAGE ================= -->
+<!-- ================= AUTHORS PAGE (UNCHANGED) ================= -->
 <div id="authorsPage" style="display:none;">
   <div id="authorsList"></div>
 </div>
@@ -102,7 +110,7 @@ li { margin-bottom: 12px; }
 let bibEntries = [];
 let vocab = { author: [], editor: [], publisher: [], language: [], tags: [] };
 
-// ---------- Chicago Citation Generator (no URL) ----------
+// ---------- Chicago Citation Generator ----------
 function makeChicagoCitation(entry) {
   const r = entry._raw;
   let parts = [];
@@ -129,7 +137,6 @@ Papa.parse('demo.csv', {
     bibEntries = results.data.map(e => {
       const manual = e['Manual Tags'] ? e['Manual Tags'].split(/\s*;\s*/) : [];
       const auto = e['Automatic Tags'] ? e['Automatic Tags'].split(/\s*;\s*/) : [];
-      const rawEntry = { ...e };
       const entry = {
         title: e.Title || '',
         author: e.Author || '',
@@ -138,8 +145,7 @@ Papa.parse('demo.csv', {
         language: e.Language || '',
         year: e['Publication Year'] || '',
         tags: [...manual, ...auto],
-        url: (e.Url || '').trim(),
-        _raw: rawEntry
+        _raw: e
       };
       entry._raw.SuggestedCitation = makeChicagoCitation(entry);
       return entry;
@@ -195,7 +201,7 @@ function setupAutocompleteFields() {
 document.getElementById('universalSearch').addEventListener('input', e => {
   const q = e.target.value.toLowerCase();
   displaySearchResults(bibEntries.filter(e =>
-    `${e.title} ${e.author} ${e.editor} ${e.publisher} ${e.language} ${e.year} ${e.tags.join(' ')}`.toLowerCase().includes(q)
+    Object.values(e._raw).join(' ').toLowerCase().includes(q)
   ));
 });
 
@@ -220,23 +226,46 @@ function filterEntries() {
 }
 
 // ---------- DISPLAY SEARCH RESULTS ----------
+const DISPLAY_FIELDS = [
+  'Type','Publication Year','Author','Title','Publication Title','Url','Date',
+  'Pages','Num Pages','Issue','Volume','Number Of Volumes','Series','Series Number',
+  'Series Text','Series Title','Publisher','Place','Language','Rights','Archive',
+  'Archive Location','Library Catalog','Extra','Notes','Link Attachments',
+  'Manual Tags','Automatic Tags','Editor','Series Editor','Translator','Contributor',
+  'Attorney','Agent','Book Author','Cast Member','Commenter','Composer','Cosponsor',
+  'Counsel','Interviewer','Producer','Recipient','Reviewed Author','Scriptwriter',
+  'Words By','Guest','Number','Edition','Running Time','Scale','Medium','Artwork Size',
+  'Filing Date','Application Number','Assignee','Issuing Authority','Country',
+  'Meeting Name','Conference Name','Court','References','Reporter','Legal Status',
+  'Priority Numbers','Programming Language','Version','System','Code',
+  'Code Number','Section','Session','Committee','History','Legislative Body'
+];
+
 function displaySearchResults(entries) {
   const results = document.getElementById('results');
   results.innerHTML = '';
 
   entries.forEach(e => {
     const li = document.createElement('li');
+
+    let fieldsHtml = '<div class="field-list">';
+    DISPLAY_FIELDS.forEach(f => {
+      if (e._raw[f] && e._raw[f].trim() !== '') {
+        fieldsHtml += `<div><strong>${f}:</strong> ${e._raw[f]}</div>`;
+      }
+    });
+    fieldsHtml += '</div>';
+
     li.innerHTML = `
-      <strong>${e.title}</strong> — ${e.author || e.editor} (${e.year})<br>
-      ${e.publisher} | ${e.language}<br>
-      <em>${e.tags.join('; ')}</em>
+      <strong>${e.title}</strong><br>
       <div class="suggested-citation">${e._raw.SuggestedCitation}</div>
+      ${fieldsHtml}
     `;
     results.appendChild(li);
   });
 }
 
-// ---------- AUTHORS ----------
+// ---------- AUTHORS (UNCHANGED) ----------
 function buildAuthorList() {
   const map = {};
   bibEntries.forEach(e => {
@@ -263,13 +292,10 @@ function buildAuthorList() {
       citationDiv.className = 'citation-inline';
       citationDiv.style.display = 'none';
 
-      // Fields under authors: Author first, then Title, then rest
       let fieldsHtml = '';
-      const raw = e._raw;
-      const keys = ['Author','Title','Editor','Publisher','Place','Publication Year','Language','Tags'];
-      keys.forEach(k => {
-        if(raw[k] && raw[k].trim() !== '') {
-          fieldsHtml += `<strong>${k}:</strong> ${raw[k]} <br>`;
+      Object.keys(e._raw).forEach(k => {
+        if(e._raw[k] && e._raw[k].trim() !== '') {
+          fieldsHtml += `<strong>${k}:</strong> ${e._raw[k]} <br>`;
         }
       });
 
@@ -288,11 +314,6 @@ function buildAuthorList() {
 }
 
 // ---------- TABS ----------
-const searchTab = document.getElementById('searchTab');
-const authorsTab = document.getElementById('authorsTab');
-const searchPage = document.getElementById('searchPage');
-const authorsPage = document.getElementById('authorsPage');
-
 searchTab.onclick = () => {
   searchPage.style.display = 'block';
   authorsPage.style.display = 'none';
