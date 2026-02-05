@@ -99,7 +99,7 @@ li { margin-bottom: 25px; }
 <ul id="results"></ul>
 </div>
 
-<!-- ================= AUTHORS PAGE (UNCHANGED) ================= -->
+<!-- ================= AUTHORS PAGE (UNCHANGED STRUCTURE) ================= -->
 <div id="authorsPage" style="display:none;">
   <div id="authorsList"></div>
 </div>
@@ -241,6 +241,13 @@ const DISPLAY_FIELDS = [
   'Code Number','Section','Session','Committee','History','Legislative Body'
 ];
 
+function renderValue(field, value) {
+  if (field === 'Url') {
+    return `<a href="${value}" target="_blank" rel="noopener">${value}</a>`;
+  }
+  return value;
+}
+
 function displaySearchResults(entries) {
   const results = document.getElementById('results');
   results.innerHTML = '';
@@ -251,7 +258,7 @@ function displaySearchResults(entries) {
     let fieldsHtml = '<div class="field-list">';
     DISPLAY_FIELDS.forEach(f => {
       if (e._raw[f] && e._raw[f].trim() !== '') {
-        fieldsHtml += `<div><strong>${f}:</strong> ${e._raw[f]}</div>`;
+        fieldsHtml += `<div><strong>${f}:</strong> ${renderValue(f, e._raw[f])}</div>`;
       }
     });
     fieldsHtml += '</div>';
@@ -265,7 +272,7 @@ function displaySearchResults(entries) {
   });
 }
 
-// ---------- AUTHORS (UNCHANGED) ----------
+// ---------- AUTHORS ----------
 function buildAuthorList() {
   const map = {};
   bibEntries.forEach(e => {
@@ -295,7 +302,10 @@ function buildAuthorList() {
       let fieldsHtml = '';
       Object.keys(e._raw).forEach(k => {
         if(e._raw[k] && e._raw[k].trim() !== '') {
-          fieldsHtml += `<strong>${k}:</strong> ${e._raw[k]} <br>`;
+          fieldsHtml += `<strong>${k}:</strong> ${k === 'Url'
+            ? `<a href="${e._raw[k]}" target="_blank" rel="noopener">${e._raw[k]}</a>`
+            : e._raw[k]
+          } <br>`;
         }
       });
 
