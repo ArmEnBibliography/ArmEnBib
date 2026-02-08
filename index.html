@@ -7,8 +7,8 @@
 <style>
 body { 
   font-family: sans-serif; 
-  padding: 20px; 
-  background-image: url("./ArmEn.png");
+  padding: 20px; background-image: 
+  url("./ArmEn.png");
   background-position: top;
   background-repeat: no-repeat;
   margin-top: 350px;
@@ -73,7 +73,6 @@ li { margin-bottom: 25px; }
 </div>
 
 <div id="searchPage">
-
 <h2>Universal Search</h2>
 <input type="text" id="universalSearch" placeholder="Type anything (title, author, tag…)">
 
@@ -115,33 +114,30 @@ li { margin-bottom: 25px; }
 let bibEntries = [];
 let vocab = { author: [], editor: [], publisher: [], language: [], tags: [] };
 
-// ---------- CHICAGO ----------
+// ---------- CHICAGO (PRIMARY AUTHOR) ----------
 function makeChicagoCitation(entry) {
   const r = entry._raw;
   let parts = [];
   if (r.Author) parts.push(r.Author);
   if (r.Title) parts.push(`<em>${r.Title}</em>`);
   if (r.Translator) parts.push(`trans. ${r.Translator}`);
+  if (r.Editor) parts.push(`ed. ${r.Editor}`);
   if (r.Place && r.Publisher && r['Publication Year'])
     parts.push(`(${r.Place}: ${r.Publisher}, ${r['Publication Year']})`);
-  return parts.join(', ');
+  return parts.join(', ') + '.';
 }
 
-// ---------- APA ----------
+// ---------- APA (TRANSLATOR / EDITOR AS AUTHOR) ----------
 function makeApaCitation(entry) {
   const r = entry._raw;
+  let author = r.Translator || r.Editor || r.Author;
+  if (!author) return '';
   let parts = [];
-
-  if (r.Translator) {
-    parts.push(`${r.Translator} (Trans.).`);
-  } else if (r.Editor) {
-    parts.push(`${r.Editor} (Ed.).`);
-  }
-
+  parts.push(author + ' (Trans.).');
   if (r['Publication Year']) parts.push(`(${r['Publication Year']}).`);
   if (r.Title) parts.push(`<em>${r.Title}</em>.`);
+  if (r.Author && author !== r.Author) parts.push(`(${r.Author}).`);
   if (r.Publisher) parts.push(r.Publisher + '.');
-
   return parts.join(' ');
 }
 
@@ -154,7 +150,6 @@ Papa.parse('demo.csv', {
     bibEntries = results.data.map(e => {
       const manual = e['Manual Tags'] ? e['Manual Tags'].split(/\s*;\s*/) : [];
       const auto = e['Automatic Tags'] ? e['Automatic Tags'].split(/\s*;\s*/) : [];
-
       const entry = {
         title: e.Title || '',
         author: e.Author || '',
@@ -167,8 +162,8 @@ Papa.parse('demo.csv', {
       };
 
       entry._raw.SuggestedCitation =
-        `<strong>Suggested Citation – Chicago:</strong> ${makeChicagoCitation(entry)}<br>` +
-        `<strong>Suggested Citation – APA:</strong> ${makeApaCitation(entry)}`;
+        `<strong>Chicago:</strong> ${makeChicagoCitation(entry)}<br>` +
+        `<strong>APA:</strong> ${makeApaCitation(entry)}`;
 
       return entry;
     });
@@ -248,15 +243,29 @@ function filterEntries() {
 }
 
 // ---------- DISPLAY SEARCH RESULTS ----------
+function renderValue(field, value) {
+  if (field === 'Url') return `<a href="${value}" target="_blank">${value}</a>`;
+  return value;
+}
+
 function displaySearchResults(entries) {
   const results = document.getElementById('results');
   results.innerHTML = '';
 
   entries.forEach(e => {
     const li = document.createElement('li');
+    let fieldsHtml = '<div class="field-list">';
+    Object.keys(e._raw).forEach(f => {
+      if (e._raw[f] && e._raw[f].trim() !== '') {
+        fieldsHtml += `<div><strong>${f}:</strong> ${renderValue(f, e._raw[f])}</div>`;
+      }
+    });
+    fieldsHtml += '</div>';
+
     li.innerHTML = `
       <strong>${e.title}</strong><br>
       <div class="suggested-citation">${e._raw.SuggestedCitation}</div>
+      ${fieldsHtml}
     `;
     results.appendChild(li);
   });
