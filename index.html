@@ -52,6 +52,14 @@ li { margin-bottom: 25px; }
   margin-bottom: 10px;
   color: #333;
 }
+
+.field-list {
+  margin-left: 15px;
+  font-size: 0.95em;
+}
+.field-list div {
+  margin-bottom: 3px;
+}
 </style>
 </head>
 
@@ -65,6 +73,35 @@ li { margin-bottom: 25px; }
 </div>
 
 <div id="searchPage">
+
+<h2>Universal Search</h2>
+<input type="text" id="universalSearch" placeholder="Type anything (title, author, tag…)">
+
+<h2>Field-specific Search</h2>
+
+<div class="autocomplete"><input id="titleSearch" placeholder="Title"></div>
+<div class="autocomplete">
+  <input id="authorSearch" placeholder="Author">
+  <div class="suggestions" id="authorSuggestions"></div>
+</div>
+<div class="autocomplete">
+  <input id="editorSearch" placeholder="Editor">
+  <div class="suggestions" id="editorSuggestions"></div>
+</div>
+<div class="autocomplete">
+  <input id="publisherSearch" placeholder="Publisher">
+  <div class="suggestions" id="publisherSuggestions"></div>
+</div>
+<div class="autocomplete">
+  <input id="languageSearch" placeholder="Language">
+  <div class="suggestions" id="languageSuggestions"></div>
+</div>
+<div class="autocomplete"><input id="yearSearch" placeholder="Year"></div>
+<div class="autocomplete">
+  <input id="tagSearch" placeholder="Tag (exact)">
+  <div class="suggestions" id="tagSuggestions"></div>
+</div>
+
 <ul id="results"></ul>
 </div>
 
@@ -76,54 +113,34 @@ li { margin-bottom: 25px; }
 
 <script>
 let bibEntries = [];
+let vocab = { author: [], editor: [], publisher: [], language: [], tags: [] };
 
-// ---------- CHICAGO (unchanged logic) ----------
+// ---------- CHICAGO ----------
 function makeChicagoCitation(entry) {
   const r = entry._raw;
   let parts = [];
   if (r.Author) parts.push(r.Author);
   if (r.Title) parts.push(`<em>${r.Title}</em>`);
   if (r.Translator) parts.push(`trans. ${r.Translator}`);
-  if (r.Editor) parts.push(`ed. ${r.Editor}`);
   if (r.Place && r.Publisher && r['Publication Year'])
     parts.push(`(${r.Place}: ${r.Publisher}, ${r['Publication Year']})`);
   return parts.join(', ');
 }
 
-// ---------- APA (primary-aware) ----------
+// ---------- APA ----------
 function makeApaCitation(entry) {
   const r = entry._raw;
-
-  const manualTags = r['Manual Tags'] || '';
-  const isPrimary = manualTags
-    .split(/\s*;\s*/)
-    .some(t => t.toLowerCase().startsWith('primary'));
-
   let parts = [];
 
-  if (isPrimary) {
-    if (r.Translator) {
-      parts.push(`${r.Translator} (Trans.).`);
-    } else if (r.Editor) {
-      parts.push(`${r.Editor} (Ed.).`);
-    }
-
-    if (r['Publication Year']) parts.push(`(${r['Publication Year']}).`);
-    if (r.Title) parts.push(`<em>${r.Title}</em>.`);
-    if (r.Publisher) parts.push(`${r.Publisher}.`);
-    if (r.Author) parts.push(`(Original work by ${r.Author})`);
-
-  } else {
-    if (r.Author) {
-      parts.push(`${r.Author}.`);
-    } else if (r.Editor) {
-      parts.push(`${r.Editor} (Ed.).`);
-    }
-
-    if (r['Publication Year']) parts.push(`(${r['Publication Year']}).`);
-    if (r.Title) parts.push(`<em>${r.Title}</em>.`);
-    if (r.Publisher) parts.push(`${r.Publisher}.`);
+  if (r.Translator) {
+    parts.push(`${r.Translator} (Trans.).`);
+  } else if (r.Editor) {
+    parts.push(`${r.Editor} (Ed.).`);
   }
+
+  if (r['Publication Year']) parts.push(`(${r['Publication Year']}).`);
+  if (r.Title) parts.push(`<em>${r.Title}</em>.`);
+  if (r.Publisher) parts.push(r.Publisher + '.');
 
   return parts.join(' ');
 }
@@ -135,7 +152,19 @@ Papa.parse('demo.csv', {
   skipEmptyLines: true,
   complete: function(results) {
     bibEntries = results.data.map(e => {
-      const entry = { _raw: e };
+      const manual = e['Manual Tags'] ? e['Manual Tags'].split(/\s*;\s*/) : [];
+      const auto = e['Automatic Tags'] ? e['Automatic Tags'].split(/\s*;\s*/) : [];
+
+      const entry = {
+        title: e.Title || '',
+        author: e.Author || '',
+        editor: e.Editor || '',
+        publisher: e.Publisher || '',
+        language: e.Language || '',
+        year: e['Publication Year'] || '',
+        tags: [...manual, ...auto],
+        _raw: e
+      };
 
       entry._raw.SuggestedCitation =
         `<strong>Suggested Citation – Chicago:</strong> ${makeChicagoCitation(entry)}<br>` +
@@ -143,18 +172,92 @@ Papa.parse('demo.csv', {
 
       return entry;
     });
-    displaySearchResults(bibEntries);
-    buildAuthorList();
+    initAll();
   }
 });
+
+// ---------- INIT ----------
+function initAll() {
+  buildVocab();
+  setupAutocompleteFields();
+  displaySearchResults(bibEntries);
+  buildAuthorList();
+}
+
+// ---------- VOCAB ----------
+function buildVocab() {
+  vocab.author = [...new Set(bibEntries.map(e => e.author).filter(Boolean))];
+  vocab.editor = [...new Set(bibEntries.map(e => e.editor).filter(Boolean))];
+  vocab.publisher = [...new Set(bibEntries.map(e => e.publisher).filter(Boolean))];
+  vocab.language = [...new Set(bibEntries.map(e => e.language).filter(Boolean))];
+  vocab.tags = [...new Set(bibEntries.flatMap(e => e.tags))];
+}
+
+// ---------- AUTOCOMPLETE ----------
+function setupAutocomplete(inputId, suggestionId, values) {
+  const input = document.getElementById(inputId);
+  const box = document.getElementById(suggestionId);
+  input.addEventListener('input', () => {
+    box.innerHTML = '';
+    const q = input.value.toLowerCase();
+    if (!q) return;
+    values.filter(v => v.toLowerCase().includes(q)).slice(0,10).forEach(v => {
+      const div = document.createElement('div');
+      div.textContent = v;
+      div.onclick = () => { input.value = v; box.innerHTML = ''; filterEntries(); };
+      box.appendChild(div);
+    });
+  });
+  document.addEventListener('click', e => { if (!input.contains(e.target)) box.innerHTML = ''; });
+}
+
+function setupAutocompleteFields() {
+  setupAutocomplete('authorSearch','authorSuggestions',vocab.author);
+  setupAutocomplete('editorSearch','editorSuggestions',vocab.editor);
+  setupAutocomplete('publisherSearch','publisherSuggestions',vocab.publisher);
+  setupAutocomplete('languageSearch','languageSuggestions',vocab.language);
+  setupAutocomplete('tagSearch','tagSuggestions',vocab.tags);
+}
+
+// ---------- SEARCH ----------
+document.getElementById('universalSearch').addEventListener('input', e => {
+  const q = e.target.value.toLowerCase();
+  displaySearchResults(bibEntries.filter(e =>
+    Object.values(e._raw).join(' ').toLowerCase().includes(q)
+  ));
+});
+
+function filterEntries() {
+  const t = titleSearch.value.toLowerCase();
+  const a = authorSearch.value.toLowerCase();
+  const ed = editorSearch.value.toLowerCase();
+  const p = publisherSearch.value.toLowerCase();
+  const l = languageSearch.value.toLowerCase();
+  const y = yearSearch.value.toLowerCase();
+  const tag = tagSearch.value.toLowerCase();
+
+  displaySearchResults(bibEntries.filter(e =>
+    e.title.toLowerCase().includes(t) &&
+    e.author.toLowerCase().includes(a) &&
+    e.editor.toLowerCase().includes(ed) &&
+    e.publisher.toLowerCase().includes(p) &&
+    e.language.toLowerCase().includes(l) &&
+    e.year.toLowerCase().includes(y) &&
+    (tag ? e.tags.some(x => x.toLowerCase() === tag) : true)
+  ));
+}
 
 // ---------- DISPLAY SEARCH RESULTS ----------
 function displaySearchResults(entries) {
   const results = document.getElementById('results');
   results.innerHTML = '';
+
   entries.forEach(e => {
     const li = document.createElement('li');
-    li.innerHTML = `<div class="suggested-citation">${e._raw.SuggestedCitation}</div>`;
+    li.innerHTML = `
+      <strong>${e.title}</strong><br>
+      <div class="suggested-citation">${e._raw.SuggestedCitation}</div>
+    `;
     results.appendChild(li);
   });
 }
@@ -163,10 +266,10 @@ function displaySearchResults(entries) {
 function buildAuthorList() {
   const map = {};
   bibEntries.forEach(e => {
-    const a = e._raw.Author;
-    if (!a) return;
-    if (!map[a]) map[a] = [];
-    map[a].push(e);
+    (e.author ? e.author.split(/\s*;\s*/) : []).forEach(a => {
+      if (!map[a]) map[a] = [];
+      map[a].push(e);
+    });
   });
 
   const container = document.getElementById('authorsList');
@@ -180,24 +283,39 @@ function buildAuthorList() {
     map[author].forEach(e => {
       const w = document.createElement('div');
       w.className = 'work';
-      w.textContent = e._raw.Title || '';
+      w.textContent = e.title;
 
-      const c = document.createElement('div');
-      c.className = 'citation-inline';
-      c.style.display = 'none';
-      c.innerHTML = `<div class="suggested-citation">${e._raw.SuggestedCitation}</div>`;
+      const citationDiv = document.createElement('div');
+      citationDiv.className = 'citation-inline';
+      citationDiv.style.display = 'none';
+      citationDiv.innerHTML = `<div class="suggested-citation">${e._raw.SuggestedCitation}</div>`;
 
       w.onclick = () => {
-        c.style.display = c.style.display === 'none' ? 'block' : 'none';
+        citationDiv.style.display = citationDiv.style.display === 'none' ? 'block' : 'none';
       };
 
       d.appendChild(w);
-      d.appendChild(c);
+      d.appendChild(citationDiv);
     });
 
     container.appendChild(d);
   });
 }
+
+// ---------- TABS ----------
+searchTab.onclick = () => {
+  searchPage.style.display = 'block';
+  authorsPage.style.display = 'none';
+  searchTab.classList.add('active');
+  authorsTab.classList.remove('active');
+};
+
+authorsTab.onclick = () => {
+  searchPage.style.display = 'none';
+  authorsPage.style.display = 'block';
+  authorsTab.classList.add('active');
+  searchTab.classList.remove('active');
+};
 </script>
 
 </body>
