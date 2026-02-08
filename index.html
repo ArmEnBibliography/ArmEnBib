@@ -77,7 +77,7 @@ li { margin-bottom: 25px; }
 <script>
 let bibEntries = [];
 
-// ---------- CHICAGO ----------
+// ---------- CHICAGO (unchanged logic) ----------
 function makeChicagoCitation(entry) {
   const r = entry._raw;
   let parts = [];
@@ -85,19 +85,15 @@ function makeChicagoCitation(entry) {
   if (r.Title) parts.push(`<em>${r.Title}</em>`);
   if (r.Translator) parts.push(`trans. ${r.Translator}`);
   if (r.Editor) parts.push(`ed. ${r.Editor}`);
-  if (r['Publication Title']) parts.push(r['Publication Title']);
   if (r.Place && r.Publisher && r['Publication Year'])
     parts.push(`(${r.Place}: ${r.Publisher}, ${r['Publication Year']})`);
-  else if (r.Publisher && r['Publication Year']) parts.push(`(${r.Publisher}, ${r['Publication Year']})`);
-  else if (r['Publication Year']) parts.push(`(${r['Publication Year']})`);
   return parts.join(', ');
 }
 
-// ---------- APA (Primary-aware) ----------
+// ---------- APA (primary-aware) ----------
 function makeApaCitation(entry) {
   const r = entry._raw;
 
-  // Detect primary source by Manual Tags
   const manualTags = r['Manual Tags'] || '';
   const isPrimary = manualTags
     .split(/\s*;\s*/)
@@ -106,7 +102,6 @@ function makeApaCitation(entry) {
   let parts = [];
 
   if (isPrimary) {
-    // Primary source: use Translator or Editor as main responsible
     if (r.Translator) {
       parts.push(`${r.Translator} (Trans.).`);
     } else if (r.Editor) {
@@ -119,7 +114,6 @@ function makeApaCitation(entry) {
     if (r.Author) parts.push(`(Original work by ${r.Author})`);
 
   } else {
-    // Secondary source or article: Author is main
     if (r.Author) {
       parts.push(`${r.Author}.`);
     } else if (r.Editor) {
@@ -128,8 +122,6 @@ function makeApaCitation(entry) {
 
     if (r['Publication Year']) parts.push(`(${r['Publication Year']}).`);
     if (r.Title) parts.push(`<em>${r.Title}</em>.`);
-    if (r['Publication Title']) parts.push(`${r['Publication Title']},`);
-    if (r.Pages) parts.push(`${r.Pages}.`);
     if (r.Publisher) parts.push(`${r.Publisher}.`);
   }
 
@@ -145,7 +137,6 @@ Papa.parse('demo.csv', {
     bibEntries = results.data.map(e => {
       const entry = { _raw: e };
 
-      // Suggested citations for both styles
       entry._raw.SuggestedCitation =
         `<strong>Suggested Citation – Chicago:</strong> ${makeChicagoCitation(entry)}<br>` +
         `<strong>Suggested Citation – APA:</strong> ${makeApaCitation(entry)}`;
@@ -207,26 +198,6 @@ function buildAuthorList() {
     container.appendChild(d);
   });
 }
-
-// ---------- TABS ----------
-const searchTab = document.getElementById('searchTab');
-const authorsTab = document.getElementById('authorsTab');
-const searchPage = document.getElementById('searchPage');
-const authorsPage = document.getElementById('authorsPage');
-
-searchTab.onclick = () => {
-  searchPage.style.display = 'block';
-  authorsPage.style.display = 'none';
-  searchTab.classList.add('active');
-  authorsTab.classList.remove('active');
-};
-
-authorsTab.onclick = () => {
-  searchPage.style.display = 'none';
-  authorsPage.style.display = 'block';
-  authorsTab.classList.add('active');
-  searchTab.classList.remove('active');
-};
 </script>
 
 </body>
