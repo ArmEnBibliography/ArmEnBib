@@ -72,9 +72,7 @@ li { margin-bottom: 25px; }
   <button id="authorsTab">Authors</button>
 </div>
 
-<!-- ================= SEARCH PAGE ================= -->
 <div id="searchPage">
-
 <h2>Universal Search</h2>
 <input type="text" id="universalSearch" placeholder="Type anything (title, author, tag…)">
 
@@ -106,7 +104,6 @@ li { margin-bottom: 25px; }
 <ul id="results"></ul>
 </div>
 
-<!-- ================= AUTHORS PAGE (UNCHANGED STRUCTURE) ================= -->
 <div id="authorsPage" style="display:none;">
   <div id="authorsList"></div>
 </div>
@@ -117,22 +114,31 @@ li { margin-bottom: 25px; }
 let bibEntries = [];
 let vocab = { author: [], editor: [], publisher: [], language: [], tags: [] };
 
-// ---------- Chicago Citation Generator ----------
+// ---------- CHICAGO (PRIMARY AUTHOR) ----------
 function makeChicagoCitation(entry) {
   const r = entry._raw;
   let parts = [];
-  if(r.Author) parts.push(r.Author);
-  if(r.Title) parts.push(`*${r.Title}*`);
-  if(r['Publication Title']) parts.push(r['Publication Title']);
-  if(r.Editor) parts.push(`edited by ${r.Editor}`);
-  if(r.Series) parts.push(`${r.Series}${r['Series Number'] ? ', no. ' + r['Series Number'] : ''}`);
-  if(r.Volume) parts.push(`vol. ${r.Volume}${r['Number Of Volumes'] ? ' of ' + r['Number Of Volumes'] : ''}`);
-  if(r.Place && r.Publisher && r['Publication Year']) parts.push(`(${r.Place}: ${r.Publisher}, ${r['Publication Year']})`);
-  else if(r.Place && r.Publisher) parts.push(`(${r.Place}: ${r.Publisher})`);
-  else if(r.Publisher && r['Publication Year']) parts.push(`(${r.Publisher}, ${r['Publication Year']})`);
-  else if(r['Publication Year']) parts.push(`(${r['Publication Year']})`);
-  if(r.Pages) parts.push(r.Pages);
-  return `<b>Suggested Citation:</b> ` + parts.join(', ');
+  if (r.Author) parts.push(r.Author);
+  if (r.Title) parts.push(`<em>${r.Title}</em>`);
+  if (r.Translator) parts.push(`trans. ${r.Translator}`);
+  if (r.Editor) parts.push(`ed. ${r.Editor}`);
+  if (r.Place && r.Publisher && r['Publication Year'])
+    parts.push(`(${r.Place}: ${r.Publisher}, ${r['Publication Year']})`);
+  return parts.join(', ') + '.';
+}
+
+// ---------- APA (TRANSLATOR / EDITOR AS AUTHOR) ----------
+function makeApaCitation(entry) {
+  const r = entry._raw;
+  let author = r.Translator || r.Editor || r.Author;
+  if (!author) return '';
+  let parts = [];
+  parts.push(author + ' (Trans.).');
+  if (r['Publication Year']) parts.push(`(${r['Publication Year']}).`);
+  if (r.Title) parts.push(`<em>${r.Title}</em>.`);
+  if (r.Author && author !== r.Author) parts.push(`(${r.Author}).`);
+  if (r.Publisher) parts.push(r.Publisher + '.');
+  return parts.join(' ');
 }
 
 // ---------- LOAD CSV ----------
@@ -154,7 +160,11 @@ Papa.parse('demo.csv', {
         tags: [...manual, ...auto],
         _raw: e
       };
-      entry._raw.SuggestedCitation = makeChicagoCitation(entry);
+
+      entry._raw.SuggestedCitation =
+        `<strong>Chicago:</strong> ${makeChicagoCitation(entry)}<br>` +
+        `<strong>APA:</strong> ${makeApaCitation(entry)}`;
+
       return entry;
     });
     initAll();
@@ -233,25 +243,8 @@ function filterEntries() {
 }
 
 // ---------- DISPLAY SEARCH RESULTS ----------
-const DISPLAY_FIELDS = [
-  'Type','Publication Year','Author','Title','Publication Title','Url','Date',
-  'Pages','Num Pages','Issue','Volume','Number Of Volumes','Series','Series Number',
-  'Series Text','Series Title','Publisher','Place','Language','Rights','Archive',
-  'Archive Location','Library Catalog','Extra','Notes','Link Attachments',
-  'Manual Tags','Automatic Tags','Editor','Series Editor','Translator','Contributor',
-  'Attorney','Agent','Book Author','Cast Member','Commenter','Composer','Cosponsor',
-  'Counsel','Interviewer','Producer','Recipient','Reviewed Author','Scriptwriter',
-  'Words By','Guest','Number','Edition','Running Time','Scale','Medium','Artwork Size',
-  'Filing Date','Application Number','Assignee','Issuing Authority','Country',
-  'Meeting Name','Conference Name','Court','References','Reporter','Legal Status',
-  'Priority Numbers','Programming Language','Version','System','Code',
-  'Code Number','Section','Session','Committee','History','Legislative Body'
-];
-
 function renderValue(field, value) {
-  if (field === 'Url') {
-    return `<a href="${value}" target="_blank" >${value}</a>`;
-  }
+  if (field === 'Url') return `<a href="${value}" target="_blank">${value}</a>`;
   return value;
 }
 
@@ -261,9 +254,8 @@ function displaySearchResults(entries) {
 
   entries.forEach(e => {
     const li = document.createElement('li');
-
     let fieldsHtml = '<div class="field-list">';
-    DISPLAY_FIELDS.forEach(f => {
+    Object.keys(e._raw).forEach(f => {
       if (e._raw[f] && e._raw[f].trim() !== '') {
         fieldsHtml += `<div><strong>${f}:</strong> ${renderValue(f, e._raw[f])}</div>`;
       }
@@ -305,18 +297,7 @@ function buildAuthorList() {
       const citationDiv = document.createElement('div');
       citationDiv.className = 'citation-inline';
       citationDiv.style.display = 'none';
-
-      let fieldsHtml = '';
-      Object.keys(e._raw).forEach(k => {
-        if(e._raw[k] && e._raw[k].trim() !== '') {
-          fieldsHtml += `<strong>${k}:</strong> ${k === 'Url'
-            ? `<a href="${e._raw[k]}" target="_blank" rel="noopener">${e._raw[k]}</a>`
-            : e._raw[k]
-          } <br>`;
-        }
-      });
-
-      citationDiv.innerHTML = `<div class="suggested-citation">${e._raw.SuggestedCitation}</div>${fieldsHtml}`;
+      citationDiv.innerHTML = `<div class="suggested-citation">${e._raw.SuggestedCitation}</div>`;
 
       w.onclick = () => {
         citationDiv.style.display = citationDiv.style.display === 'none' ? 'block' : 'none';
